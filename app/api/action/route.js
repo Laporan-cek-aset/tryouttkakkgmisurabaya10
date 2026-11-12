@@ -153,8 +153,15 @@ export async function POST(req) {
     if (action === 'getUserList') {
       const [role, , sekolah] = args;
       let users;
-      if (role === 'guru') users = await turso.execute({ sql: "SELECT * FROM Users WHERE Role = 'siswa' AND LOWER(TRIM(Sekolah)) = LOWER(TRIM(?))", args: [sekolah] });
-      else users = await turso.execute("SELECT * FROM Users"); 
+      
+      // OPTIMASI: Jangan panggil kolom 'Foto' karena teks Base64 sangat membebani memori
+      const sqlQuery = "SELECT ID, Nama, Username, Password, Role, Sekolah, Kelas, TglLahir, Sesi FROM Users";
+      
+      if (role === 'guru') {
+          users = await turso.execute({ sql: `${sqlQuery} WHERE Role = 'siswa' AND LOWER(TRIM(Sekolah)) = LOWER(TRIM(?))`, args: [sekolah] });
+      } else {
+          users = await turso.execute(sqlQuery); 
+      }
       return NextResponse.json({ status: 'success', data: users.rows });
     }
 
@@ -164,10 +171,17 @@ export async function POST(req) {
       if (mode === 'save') {
         const id = d.id || ('U' + Date.now());
         const cek = await turso.execute({ sql: "SELECT ID FROM Users WHERE ID = ?", args: [id] });
-if (cek.rows.length > 0) {
-          await turso.execute({ sql: "UPDATE Users SET Nama=?, Username=?, Password=?, Role=?, Sekolah=?, Kelas=?, TglLahir=?, Foto=?, Sesi=?, DeviceID='RESET' WHERE ID=?", args: [d.nama, d.username, d.password, d.role, d.sekolah, d.kelas, d.tglLahir, d.foto, d.sesi, id] });
+        if (cek.rows.length > 0) {
+          // PERBAIKAN: Gunakan COALESCE(NULLIF(?, ''), Foto) agar foto lama tetap aman saat proses edit
+          await turso.execute({ 
+              sql: "UPDATE Users SET Nama=?, Username=?, Password=?, Role=?, Sekolah=?, Kelas=?, TglLahir=?, Foto=COALESCE(NULLIF(?, ''), Foto), Sesi=?, DeviceID='RESET' WHERE ID=?", 
+              args: [d.nama, d.username, d.password, d.role, d.sekolah, d.kelas, d.tglLahir, d.foto, d.sesi, id] 
+          });
         } else {
-          await turso.execute({ sql: "INSERT INTO Users (ID, Nama, Username, Password, Role, Sekolah, Kelas, TglLahir, Foto, Sesi) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", args: [id, d.nama, d.username, d.password, d.role, d.sekolah, d.kelas, d.tglLahir, d.foto, d.sesi] });
+          await turso.execute({ 
+              sql: "INSERT INTO Users (ID, Nama, Username, Password, Role, Sekolah, Kelas, TglLahir, Foto, Sesi) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+              args: [id, d.nama, d.username, d.password, d.role, d.sekolah, d.kelas, d.tglLahir, d.foto, d.sesi] 
+          });
         }
       } else if (mode === 'delete') {
         await turso.execute({ sql: "DELETE FROM Users WHERE ID = ?", args: [d.id] });
