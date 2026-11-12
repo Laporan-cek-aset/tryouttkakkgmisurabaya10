@@ -50,18 +50,19 @@ export async function POST(req) {
       const [role, userId, , sekolah, filterMapel] = args; 
       let exams, users;
       
+      // OPTIMASI: Hanya ambil kolom yang benar-benar dipakai di Dashboard
       if (role === 'guru') {
-        exams = await turso.execute("SELECT * FROM Exams WHERE Mapel != 'SURVEY'");
-        users = await turso.execute({ sql: "SELECT * FROM Users WHERE Role = 'siswa' AND LOWER(TRIM(Sekolah)) = LOWER(TRIM(?))", args: [sekolah] });
+        exams = await turso.execute("SELECT ExamID, Judul, Mapel, TargetKelas, Durasi, Token, StartDate, EndDate, Status, AllowDownloadQ FROM Exams WHERE Mapel != 'SURVEY'");
+        users = await turso.execute({ sql: "SELECT ID, Sekolah FROM Users WHERE Role = 'siswa' AND LOWER(TRIM(Sekolah)) = LOWER(TRIM(?))", args: [sekolah] });
       } else {
-        exams = await turso.execute("SELECT * FROM Exams WHERE Mapel != 'SURVEY'");
-        users = await turso.execute("SELECT * FROM Users WHERE Role = 'siswa'");
+        exams = await turso.execute("SELECT ExamID, Judul, Mapel, TargetKelas, Durasi, Token, StartDate, EndDate, Status, AllowDownloadQ FROM Exams WHERE Mapel != 'SURVEY'");
+        users = await turso.execute("SELECT ID, Sekolah FROM Users WHERE Role = 'siswa'");
       }
       
       let output = { logo: 'https://lh3.googleusercontent.com/d/1SCvmdQxuqmX_f0gBaYt0Ob53Tws97Hnq' };
       
       try {
-        const settings = await turso.execute("SELECT * FROM Settings WHERE KeyName IN ('SesiAktif', 'JamSesi1', 'JamSesi2', 'JamSesi3')");
+        const settings = await turso.execute("SELECT KeyName, KeyValue FROM Settings WHERE KeyName IN ('SesiAktif', 'JamSesi1', 'JamSesi2', 'JamSesi3')");
         output.sesiAktif = '1'; output.jamSesi1 = '07.30 - 09.00'; output.jamSesi2 = '09.30 - 11.00'; output.jamSesi3 = '11.30 - 13.00';
         settings.rows.forEach(r => {
             if(r.KeyName === 'SesiAktif') output.sesiAktif = r.KeyValue;
@@ -89,7 +90,7 @@ export async function POST(req) {
             Jumlah: schoolCounts[k]
         })).sort((a, b) => b.Jumlah - a.Jumlah); 
 
-        // PERBAIKAN: Menambahkan filter mapel pada SQL Ranking
+        // OPTIMASI: Peringkat SQL
         let sqlRank = `
             SELECT u.Sekolah, AVG(r.TotalNilai) as RataRata 
             FROM Results r 
@@ -111,18 +112,19 @@ export async function POST(req) {
         const schoolRankQuery = await turso.execute({ sql: sqlRank, args: rankArgs });
         output.schoolRanks = schoolRankQuery.rows;
 
-        // Mendapatkan daftar mapel unik untuk dropdown di frontend
         const mapelsQuery = await turso.execute("SELECT DISTINCT Mapel FROM Exams WHERE Mapel != 'SURVEY'");
         output.uniqueMapels = mapelsQuery.rows.map(r => r.Mapel);
         output.currentMapelFilter = filterMapel || 'ALL';
 
         if (role === 'admin') {
-            const surveys = await turso.execute("SELECT * FROM Exams WHERE Mapel = 'SURVEY'");
+            const surveys = await turso.execute("SELECT ExamID, Judul, TargetKelas, Token, ShowStats FROM Exams WHERE Mapel = 'SURVEY'");
             output.surveys = surveys.rows;
         }
 
       } else if (role === 'siswa') {
         output.availableExams = exams.rows.filter(e => e.Status === 'Aktif');
+        
+        // OPTIMASI: Jangan panggil kolom 'Detail' untuk Siswa
         const history = await turso.execute({ 
           sql: "SELECT r.ResultID, r.ExamID, r.WaktuSubmit, r.TotalNilai as Nilai, e.Judul, e.AllowDownloadR, e.AllowDownloadQ, e.ShowStats, r.Pelanggaran FROM Results r JOIN Exams e ON r.ExamID = e.ExamID WHERE r.SiswaID = ? AND e.Mapel != 'SURVEY'", 
           args: [userId] 
