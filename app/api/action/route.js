@@ -416,11 +416,18 @@ if (action === 'getExamPack') {
       return NextResponse.json({ status: 'success', data: modifiedRows });
     }
 
-    if (action === 'getSiswaDetailHasil') {
+if (action === 'getSiswaDetailHasil') {
       const rid = args[0];
-      // Data Detail diambil langsung dari database
-const results = await turso.execute({ sql: "SELECT r.TotalNilai, r.Detail, e.Judul, e.Mapel FROM Results r JOIN Exams e ON r.ExamID = e.ExamID WHERE r.ResultID = ?", args: [rid] });
-return NextResponse.json({ status: 'success', data: results.rows[0] });
+      // PERBAIKAN: Pastikan kita mengambil informasi nama dan kelas juga
+      const results = await turso.execute({ 
+          sql: `SELECT r.TotalNilai, r.Detail, e.Judul, e.Mapel, u.Nama as NamaSiswa 
+                FROM Results r 
+                JOIN Exams e ON r.ExamID = e.ExamID 
+                LEFT JOIN Users u ON r.SiswaID = u.ID
+                WHERE r.ResultID = ?`, 
+          args: [rid] 
+      });
+      return NextResponse.json({ status: 'success', data: results.rows[0] });
     }
 
     if (action === 'adminUpdateResult') {
