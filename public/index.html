@@ -1469,21 +1469,29 @@ function printRecap(rid) {
   
   let detailArr = []; 
   
-  // PERBAIKAN: Logika parse yang lebih tangguh
-  if (d.detail) {
+  // PERBAIKAN TOTAL: Logika parse JSON berlapis agar kebal error
+  try {
       if (typeof d.detail === 'string') {
-          try {
-              detailArr = JSON.parse(d.detail);
-          } catch(e) {
-              console.error("Gagal parse string d.detail:", e);
+          // Pertama, kita coba decode URI jika ada karakter khusus yang di-encode
+          let decodedString = d.detail;
+          try { decodedString = decodeURIComponent(d.detail); } catch(e) {}
+          
+          // Kedua, parse string menjadi array/objek
+          detailArr = JSON.parse(decodedString);
+          
+          // Terkadang string JSON dibungkus dua kali (string di dalam string)
+          if (typeof detailArr === 'string') {
+              detailArr = JSON.parse(detailArr);
           }
       } else if (typeof d.detail === 'object') {
-          // Jika entah bagaimana data sudah berupa objek (bukan string JSON)
           detailArr = d.detail;
       }
+  } catch(e) {
+      console.error("Gagal parse d.detail:", e);
+      detailArr = []; 
   }
 
-  // Jika setelah dicoba parse ternyata masih bukan array (misal null atau undefined)
+  // Pengamanan terakhir: Pastikan bentuknya benar-benar array
   if (!Array.isArray(detailArr)) {
       detailArr = [];
   }
@@ -1492,7 +1500,7 @@ function printRecap(rid) {
   if (detailArr.length > 0 && detailArr[0].responses !== undefined) {
       isSurvey = true;
   }
-
+  
   let detailHtml = '';
   let nilaiBox = '';
 
@@ -1520,13 +1528,15 @@ function printRecap(rid) {
       
       detailHtml = '<table style="width:100%; border-collapse:collapse; margin-top:20px; font-size:14px;" border="1"><thead style="background:#f1f5f9;"><tr><th style="padding:8px; width:5%;">No</th><th style="padding:8px; width:15%;">Tipe</th><th style="padding:8px; width:65%;">Jawaban Siswa</th><th style="padding:8px; width:15%;">Skor Didapat</th></tr></thead><tbody>';
       
-      detailArr.forEach(item => {
-          let n = item.i !== undefined ? item.i : item[0]; 
-          let s = item.s !== undefined ? item.s : item[1]; 
+detailArr.forEach((item, index) => {
+          let n = item.i !== undefined ? item.i : (item[0] !== undefined ? item[0] : index + 1); 
+          let s = item.s !== undefined ? item.s : (item[1] !== undefined ? item[1] : 0); 
           let t = item.t || 'Objektif'; 
           let a = item.a !== undefined ? item.a : '';
+          
           let displayAns = Array.isArray(a) ? a.join(', ') : a; 
           displayAns = displayAns ? String(displayAns).replace(/\n/g, '<br>') : 'Tidak dijawab';
+          
           detailHtml += `<tr><td style="padding:8px; text-align:center;">${n}</td><td style="padding:8px; text-align:center;">${t}</td><td style="padding:8px;">${displayAns}</td><td style="padding:8px; text-align:center;">${s}</td></tr>`;
       });
       detailHtml += '</tbody></table>';
