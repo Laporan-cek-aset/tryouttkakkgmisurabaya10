@@ -2115,10 +2115,27 @@ function openExamModal(str) {
   if(str) {
     d = JSON.parse(decodeURIComponent(str));
     $('#ex-id').val(d.ExamID); $('#ex-judul').val(d.Judul); $('#ex-mapel').val(d.Mapel); $('#ex-durasi').val(d.Durasi);
-    $('#ex-limit').val(d.Limit); $('#ex-start').val(d.StartDate.replace(' ','T')); $('#ex-end').val(d.EndDate.replace(' ','T'));
-    $('#ex-token').val(d.Token || ''); $('#ex-randomQ').prop('checked', d.RandomQ === 'Yes'); $('#ex-showStats').prop('checked', d.ShowStats === 'Yes');
-    $('#ex-dlSoal').prop('checked', d.AllowDownloadQ === 'Yes'); $('#ex-dlHasil').prop('checked', d.AllowDownloadR === 'Yes');
-  } else { $('#modalExam form')[0].reset(); $('#ex-id').val(''); $('#ex-token').val(''); }
+    $('#ex-limit').val(d.Limit); 
+    
+    // Perbaikan format tanggal agar pas dengan format input datetime-local HTML
+    if (d.StartDate) $('#ex-start').val(d.StartDate.replace(' ','T')); 
+    if (d.EndDate) $('#ex-end').val(d.EndDate.replace(' ','T'));
+    
+    $('#ex-token').val(d.Token || ''); 
+    
+    // PERBAIKAN TOGGLE: Pengecekan harus memperhitungkan spasi dan case-sensitivity
+    $('#ex-randomQ').prop('checked', String(d.RandomQ).trim().toLowerCase() === 'yes'); 
+    
+    // ShowStats bisa berisi 'Yes' atau 'Aktif'
+    $('#ex-showStats').prop('checked', String(d.ShowStats).trim().toLowerCase() === 'yes' || String(d.ShowStats).trim().toLowerCase() === 'aktif'); 
+    
+    $('#ex-dlSoal').prop('checked', String(d.AllowDownloadQ).trim().toLowerCase() === 'yes'); 
+    $('#ex-dlHasil').prop('checked', String(d.AllowDownloadR).trim().toLowerCase() === 'yes');
+  } else { 
+      $('#modalExam form')[0].reset(); 
+      $('#ex-id').val(''); 
+      $('#ex-token').val(''); 
+  }
   let valKelas = d ? d.TargetKelas : '';
   $('#kelas-container').html(`<input type="text" name="targetKelas" id="ex-kelas" class="form-control" placeholder="Contoh: 7A, 7B, atau All" value="${valKelas}" required>`);
 }
@@ -2338,13 +2355,11 @@ function dlSiswaHasil(rid) {
         showLoad(false);
         if(res.status === 'success') {
             let pembuat = 'Pengawas / Sistem';
-            let namaSiswa = user.Nama; 
+            
+            // PERBAIKAN: Ambil nama dari data tabel yang difilter, atau dari hasil query
+            let namaSiswa = res.data.NamaSiswa || user.Nama; 
 
-            // PERBAIKAN: Ambil nama dari memori recapDataStore yang 100% akurat
-            if (recapDataStore[rid] && recapDataStore[rid].nama) {
-                namaSiswa = recapDataStore[rid].nama;
-            }
-
+            // Simpan detail (rincian JSON) ke memori agar printRecap bisa membacanya
             recapDataStore[rid] = { 
                 detail: res.data.Detail, 
                 nama: namaSiswa, 
@@ -2352,6 +2367,8 @@ function dlSiswaHasil(rid) {
                 nilai: res.data.TotalNilai, 
                 pembuat: pembuat 
             };
+            
+            // Panggil pembuatan PDF
             printRecap(rid); 
         } else { Swal.fire('Error', res.msg, 'error'); }
     })
