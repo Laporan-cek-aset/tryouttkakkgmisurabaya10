@@ -1252,9 +1252,10 @@ function renderRecapRows(data) {
             let displayNilai = '';
             let actionBtn = '';
 
-            if (isSurvey) {
+if (isSurvey) {
                 displayNilai = `<span class="badge bg-info text-dark rounded-pill px-3 fs-6">Survei</span>`;
-                actionBtn = `<button class="btn btn-sm btn-outline-primary rounded-circle me-1" onclick="printRecap('${r.ResultID}')" title="Cetak Rincian"><i class="fas fa-print"></i></button>`;
+                // PERBAIKAN: Ubah onclick dari printRecap menjadi dlSiswaHasil
+                actionBtn = `<button class="btn btn-sm btn-outline-primary rounded-circle me-1" onclick="dlSiswaHasil('${r.ResultID}')" title="Cetak Rincian"><i class="fas fa-print"></i></button>`;
             } 
             else {
                 if (role === 'guru' && r.ShowStats !== 'Yes' && r.ShowStats !== 'Aktif') {
@@ -1262,7 +1263,8 @@ function renderRecapRows(data) {
                     actionBtn = `<button class="btn btn-sm btn-outline-secondary rounded-circle me-1" title="Akses Dikunci Admin" disabled><i class="fas fa-lock"></i></button>`;
                 } else {
                     displayNilai = `<span class="badge bg-success rounded-pill px-3 fs-6">${r.TotalNilai}</span>`;
-                    actionBtn = `<button class="btn btn-sm btn-outline-primary rounded-circle me-1" onclick="printRecap('${r.ResultID}')" title="Cetak Rincian"><i class="fas fa-print"></i></button>`;
+                    // PERBAIKAN: Ubah onclick dari printRecap menjadi dlSiswaHasil
+                    actionBtn = `<button class="btn btn-sm btn-outline-primary rounded-circle me-1" onclick="dlSiswaHasil('${r.ResultID}')" title="Cetak Rincian"><i class="fas fa-print"></i></button>`;
                 }
             }
 
