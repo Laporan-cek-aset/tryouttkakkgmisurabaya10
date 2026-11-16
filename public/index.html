@@ -2748,7 +2748,17 @@ function processSubmission(retryCount = 0) {
                 if (t === 'PGK') { v = []; $(this).find('input:checked').each(function() { v.push(decodeURIComponent($(this).val())) }); }
                 else { const checked = $(this).find('input:checked').val(); if(checked) v = decodeURIComponent(checked); }
             }
-            else if (t === 'PGKK') { v = []; $(this).find('tbody tr').each(function(x) { v.push($(this).find('input:checked').val() || null) }); }
+            else if (t === 'PGKK') { 
+    v = []; 
+    $(this).find('tbody tr').each(function(x) { 
+        let rowAns = $(this).find('input:checked').val();
+        if (rowAns) { // Hanya masukkan jika siswa benar-benar memilih (menghindari deretan null/koma)
+            v.push(rowAns); 
+        } else {
+            v.push("Kosong"); // Beri tanda jika satu baris/pernyataan dilewati
+        }
+    }); 
+}
             else if (t === 'Menjodohkan') { const raw = $(`#ans-in-${idx}`).val(); v = raw ? JSON.parse(raw) : []; }
             else { v = $(this).find('textarea').val(); }
             if (v !== null && v !== undefined) ans.push({ qid: qid, answer: v });
