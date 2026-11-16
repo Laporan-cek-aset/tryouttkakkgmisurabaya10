@@ -349,13 +349,11 @@ if (action === 'getExamPack') {
                      let correct_match = 0;
                      const total_statements = keys.length;
                      
-                     // Jika panjang array jawaban lebih banyak dari jumlah kunci (karena tabel soal ikut terhitung),
-                     // ambil elemen sebanyak jumlah kunci dari bagian paling belakang (jawaban asli PGKK)
+                     // Bersihkan jika ada elemen berlebih di depan akibat tabel soal
                      let validAnswers = ans.answer;
-                     if (validAnswers.length > total_statements) {
+                     if (validAnswers.length > total_statements && total_statements > 0) {
                          validAnswers = validAnswers.slice(-total_statements);
                      }
-                     // Simpan jawaban yang sudah bersih ke detailLog
                      ans.answer = validAnswers;
 
                      validAnswers.forEach((val, idx) => {
@@ -363,7 +361,6 @@ if (action === 'getExamPack') {
                      });
                      if (total_statements > 0) scoreEarned = (correct_match / total_statements) * maxSkor;
                  }
-             }
              } else if (q.Tipe === 'PGS') {
                  if (keys.includes(ans.answer)) scoreEarned = maxSkor;
              } else {
