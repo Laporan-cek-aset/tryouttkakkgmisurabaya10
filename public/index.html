@@ -1536,29 +1536,13 @@ detailArr.forEach((item, index) => {
           let t = item.t || 'Objektif'; 
           let a = item.a !== undefined ? item.a : '';
           
+          // PERBAIKAN: Bersihkan nilai null/kosong akibat tabel stimulus agar hanya tampil B, S, B
           let displayAns = '';
-          
           if (Array.isArray(a)) {
-             // JIKA JAWABAN BERUPA ARRAY (seperti PGK atau PGKK)
-             
-             // 1. Bersihkan array dari elemen yang kosong/null/undefined/berisi tanda hubung
-             let cleanedArray = a.filter(val => val !== null && val !== undefined && val !== '' && val !== 'Kosong' && val !== '-');
-             
-             if (cleanedArray.length === 0) {
-                 // Jika setelah dibersihkan ternyata tidak ada jawaban sama sekali
-                 displayAns = 'Tidak dijawab';
-             } else {
-                 // Jika ada jawaban, gabungkan jawaban asli yang valid saja
-                 displayAns = cleanedArray.join(', '); 
-             }
+              let cleanAns = a.filter(val => val !== null && val !== undefined && String(val).trim() !== '');
+              displayAns = cleanAns.length > 0 ? cleanAns.join(', ') : 'Tidak dijawab';
           } else {
-             // JIKA JAWABAN BUKAN ARRAY (seperti PGS atau Uraian)
-             displayAns = a;
-             if (!displayAns || displayAns === 'Kosong' || displayAns === '-') {
-                 displayAns = 'Tidak dijawab';
-             } else {
-                 displayAns = String(displayAns).replace(/\n/g, '<br>');
-             }
+              displayAns = a ? String(a).replace(/\n/g, '<br>') : 'Tidak dijawab';
           }
           
           detailHtml += `<tr><td style="padding:8px; text-align:center;">${n}</td><td style="padding:8px; text-align:center;">${t}</td><td style="padding:8px;">${displayAns}</td><td style="padding:8px; text-align:center;">${s}</td></tr>`;
@@ -2770,7 +2754,7 @@ function processSubmission(retryCount = 0) {
                 if (t === 'PGK') { v = []; $(this).find('input:checked').each(function() { v.push(decodeURIComponent($(this).val())) }); }
                 else { const checked = $(this).find('input:checked').val(); if(checked) v = decodeURIComponent(checked); }
             }
-            else if (t === 'PGKK') { v = []; $(this).find('tbody tr').each(function(x) { v.push($(this).find('input:checked').val() || null) }); }
+            else if (t === 'PGKK') { v = []; $(this).find('table.tbl-pgkk tbody tr').each(function(x) { v.push($(this).find('input:checked').val() || null) }); }
             else if (t === 'Menjodohkan') { const raw = $(`#ans-in-${idx}`).val(); v = raw ? JSON.parse(raw) : []; }
             else { v = $(this).find('textarea').val(); }
             if (v !== null && v !== undefined) ans.push({ qid: qid, answer: v });
@@ -2902,7 +2886,7 @@ function runExam(qs, dur, isResume) {
 function saveAnsLocal(qid, type, idx) {
     let val; 
     if(type.includes('PG')) { if(type==='PGK') { val=[]; $(`input[name="ans-${qid}"]:checked`).each(function(){ val.push(decodeURIComponent($(this).val())) }); } else val = decodeURIComponent($(`input[name="ans-${qid}"]:checked`).val()); } 
-    else if(type === 'PGKK') { val=[]; $(`#sl-${idx} tbody tr`).each(function(x){ val.push($(`input[name="ans-${qid}-${x}"]:checked`).val()||null) }); } 
+    else if(type === 'PGKK') { val=[]; $(`#sl-${idx} table.tbl-pgkk tbody tr`).each(function(x){ val.push($(`input[name="ans-${qid}-${x}"]:checked`).val()||null) }); } 
     else if(type === 'MATCH') { const raw = $(`#ans-in-${idx}`).val(); val = raw ? JSON.parse(raw) : []; } 
     else val = $(`#sl-${idx} textarea`).val();
     
