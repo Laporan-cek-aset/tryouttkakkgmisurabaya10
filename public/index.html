@@ -1536,8 +1536,30 @@ detailArr.forEach((item, index) => {
           let t = item.t || 'Objektif'; 
           let a = item.a !== undefined ? item.a : '';
           
-          let displayAns = Array.isArray(a) ? a.join(', ') : a; 
-          displayAns = displayAns ? String(displayAns).replace(/\n/g, '<br>') : 'Tidak dijawab';
+          let displayAns = '';
+          
+          if (Array.isArray(a)) {
+             // JIKA JAWABAN BERUPA ARRAY (seperti PGK atau PGKK)
+             
+             // 1. Bersihkan array dari elemen yang kosong/null/undefined/berisi tanda hubung
+             let cleanedArray = a.filter(val => val !== null && val !== undefined && val !== '' && val !== 'Kosong' && val !== '-');
+             
+             if (cleanedArray.length === 0) {
+                 // Jika setelah dibersihkan ternyata tidak ada jawaban sama sekali
+                 displayAns = 'Tidak dijawab';
+             } else {
+                 // Jika ada jawaban, gabungkan jawaban asli yang valid saja
+                 displayAns = cleanedArray.join(', '); 
+             }
+          } else {
+             // JIKA JAWABAN BUKAN ARRAY (seperti PGS atau Uraian)
+             displayAns = a;
+             if (!displayAns || displayAns === 'Kosong' || displayAns === '-') {
+                 displayAns = 'Tidak dijawab';
+             } else {
+                 displayAns = String(displayAns).replace(/\n/g, '<br>');
+             }
+          }
           
           detailHtml += `<tr><td style="padding:8px; text-align:center;">${n}</td><td style="padding:8px; text-align:center;">${t}</td><td style="padding:8px;">${displayAns}</td><td style="padding:8px; text-align:center;">${s}</td></tr>`;
       });
