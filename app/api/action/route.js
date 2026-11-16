@@ -348,11 +348,22 @@ if (action === 'getExamPack') {
                  if (Array.isArray(ans.answer)) {
                      let correct_match = 0;
                      const total_statements = keys.length;
-                     ans.answer.forEach((val, idx) => {
+                     
+                     // Jika panjang array jawaban lebih banyak dari jumlah kunci (karena tabel soal ikut terhitung),
+                     // ambil elemen sebanyak jumlah kunci dari bagian paling belakang (jawaban asli PGKK)
+                     let validAnswers = ans.answer;
+                     if (validAnswers.length > total_statements) {
+                         validAnswers = validAnswers.slice(-total_statements);
+                     }
+                     // Simpan jawaban yang sudah bersih ke detailLog
+                     ans.answer = validAnswers;
+
+                     validAnswers.forEach((val, idx) => {
                          if (val && val === keys[idx]) correct_match++;
                      });
                      if (total_statements > 0) scoreEarned = (correct_match / total_statements) * maxSkor;
                  }
+             }
              } else if (q.Tipe === 'PGS') {
                  if (keys.includes(ans.answer)) scoreEarned = maxSkor;
              } else {
