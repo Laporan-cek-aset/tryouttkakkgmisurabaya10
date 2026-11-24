@@ -122,18 +122,23 @@ export async function POST(req) {
         }
 
       } else if (role === 'siswa') {
-        output.availableExams = exams.rows.filter(e => e.Status === 'Aktif');
-        
-        // OPTIMASI: Jangan panggil kolom 'Detail' untuk Siswa
-        const history = await turso.execute({ 
-          sql: "SELECT r.ResultID, r.ExamID, r.WaktuSubmit, r.TotalNilai as Nilai, e.Judul, e.AllowDownloadR, e.AllowDownloadQ, e.ShowStats, r.Pelanggaran FROM Results r JOIN Exams e ON r.ExamID = e.ExamID WHERE r.SiswaID = ? AND e.Mapel != 'SURVEY'", 
-          args: [userId] 
-        });
-        output.history = history.rows;
-        
-        const userSelf = await turso.execute({ sql: "SELECT Sesi FROM Users WHERE ID = ?", args: [userId] });
-        if(userSelf.rows.length > 0) output.userSesi = userSelf.rows[0].Sesi;
-      }
+    const history = await turso.execute({ 
+      sql: "SELECT r.ResultID, r.ExamID, r.WaktuSubmit, r.TotalNilai as Nilai, e.Judul, e.AllowDownloadR, e.AllowDownloadQ, e.ShowStats, r.Pelanggaran FROM Results r JOIN Exams e ON r.ExamID = e.ExamID WHERE r.SiswaID = ? AND e.Mapel != 'SURVEY'", 
+      args: [userId] 
+    });
+    output.history = history.rows;
+
+    const finishedIds = new Set(history.rows.map(h => h.ExamID));
+    output.availableExams = exams.rows
+      .filter(e => e.Status === 'Aktif')
+      .map(e => ({
+        ...e,
+        IsFinished: finishedIds.has(e.ExamID)
+      }));
+
+    const userSelf = await turso.execute({ sql: "SELECT Sesi FROM Users WHERE ID = ?", args: [userId] });
+    if (userSelf.rows.length > 0) output.userSesi = userSelf.rows[0].Sesi;
+}
       return NextResponse.json({ status: 'success', data: output });
     }
 
@@ -444,9 +449,15 @@ if (action === 'getSiswaDetailHasil') {
     }
     
     if (action === 'adminDeleteResult') {
-       await turso.execute({ sql: "DELETE FROM Results WHERE ResultID=?", args: [args[0]] });
-       return NextResponse.json({ status: 'success', msg: 'Hasil Dihapus!' });
+    const resRow = await turso.execute({ sql: "SELECT SiswaID FROM Results WHERE ResultID=?", args: [args[0]] });
+    await turso.execute({ sql: "DELETE FROM Results WHERE ResultID=?", args: [args[0]] });
+    if (resRow.rows.length > 0) {
+        try {
+            await turso.execute({ sql: "UPDATE Users SET Status='Reset / Siap Ujian', Terjawab=0 WHERE ID=?", args: [resRow.rows[0].SiswaID] });
+        } catch (e) {}
     }
+    return NextResponse.json({ status: 'success', msg: 'Hasil Dihapus & Siswa Siap Mengerjakan Ulang!' });
+}
 
     if (action === 'requestResetResult') {
        await turso.execute({ sql: "UPDATE Results SET Pelanggaran = 'Meminta Reset (Trobel)' WHERE ResultID=?", args: [args[0]] });
